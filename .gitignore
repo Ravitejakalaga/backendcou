@@ -28,3 +28,4 @@ build/
 # Miscellaneous
 .DS_Store
 *.swp
+.vercel
