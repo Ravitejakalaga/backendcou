@@ -38,6 +38,7 @@ class User(SQLModel, table=True):
     is_student: Optional[bool] = None
     is_instructor: Optional[bool] = None
     key: Optional[str] = None
+    mentor: Optional["Mentor"] = Relationship(back_populates="user")
 
 
 
