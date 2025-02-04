@@ -1,2 +1,20 @@
-# intellectual-property
-#this is update from dev
+# .env
+
+# Social Media Authentication
+GITHUB_CLIENT_ID=Ov23liNm7FWL3cnVr0yz
+GITHUB_CLIENT_SECRET=b7f65d359c93136ff3b6ae31f34576a78a54716e
+GITHUB_REDIRECT_URI=http://localhost:3000/auth/github/callback
+
+FACEBOOK_CLIENT_ID=637058102074400
+FACEBOOK_CLIENT_SECRET=90bba839a314ae208e3ff6d4f7b465fa
+FACEBOOK_REDIRECT_URI=http://localhost:3000/auth/facebook/callback
+
+# Google OAuth Settings
+GOOGLE_CLIENT_ID=289944646713-e4nrns9ivmaqq2922qr7i306qh6ai8nf.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
+GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
+
+# JWT Configuration
+JWT_SECRET_KEY=h4lgTWGCyht5RA7-heKdOga0jdfX08t7ej3hPVLJ2L4
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
