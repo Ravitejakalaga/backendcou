@@ -1,6 +1,11 @@
 from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, timezone
+
+if TYPE_CHECKING:
+    from cou_user.models.user import User
+    from cou_course.models.course import Course
+
 
 class Mentor(SQLModel, table=True):
     __tablename__ = "mentor"

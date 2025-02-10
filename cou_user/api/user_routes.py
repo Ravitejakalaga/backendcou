@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from common.database import get_session
 from cou_user.models.user import User
+from cou_user.schemas.user_schema import UserCreate, UserRead, UserUpdate
 from cou_user.repositories.user_repository import (
     create_user,
     read_user,
@@ -16,21 +17,22 @@ router = APIRouter(
     tags=["Users"]
 )
 
-@router.post("/", response_model=User, summary="Create a new user")
-def add_user(user: User, session: Session = Depends(get_session)):
-    return create_user(session, user)
+@router.post("/", response_model=UserRead, summary="Create a new user")
+def add_user(user: UserCreate, session: Session = Depends(get_session)):
+    db_user = User(**user.dict())
+    return create_user(session, db_user)
 
-@router.get("/{user_id}", response_model=User, summary="Get user details by ID")
+@router.get("/{user_id}", response_model=UserRead, summary="Get user details by ID")
 def get_user(user_id: int, session: Session = Depends(get_session)):
     return read_user(session, user_id)
 
-@router.get("/", response_model=list[User], summary="Get all users")
+@router.get("/", response_model=List[UserRead], summary="Get all users")
 def get_all_users(session: Session = Depends(get_session)):
     return read_all_users(session)
 
-@router.put("/{user_id}", response_model=User, summary="Update user details")
-def modify_user(user_id: int, updated_data: dict, session: Session = Depends(get_session)):
-    return update_user(session, user_id, updated_data)
+@router.put("/{user_id}", response_model=UserRead, summary="Update user details")
+def modify_user(user_id: int, user_update: UserUpdate, session: Session = Depends(get_session)):
+    return update_user(session, user_id, user_update.dict(exclude_unset=True))
 
 @router.delete("/{user_id}", summary="Delete a user")
 def remove_user(user_id: int, session: Session = Depends(get_session)):
