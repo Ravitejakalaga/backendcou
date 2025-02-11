@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 if TYPE_CHECKING:
     from .loginhistory import LoginHistory
+    from cou_mentor.models.mentor import Mentor
 
 class User(SQLModel, table=True):
     __tablename__ = "user"
@@ -42,6 +43,7 @@ class User(SQLModel, table=True):
 
     # Add relationships
     login_history: List["LoginHistory"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
+    mentor: Optional["Mentor"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
 
 
 
