@@ -8,12 +8,15 @@ from cou_admin.api.currency_routes import router as currency_router
 from cou_user.api.user_routes import router as user_router
 from cou_course.api.course_routes import router as course_router
 from cou_course.api.coursecategory_routes import router as coursecategory_router
+
 from fastapi.middleware.cors import CORSMiddleware
 from auth_bl import auth_router
 import logging
 from cou_mentor.api.mentor_routes import router as mentor_router
 from fastapi import FastAPI
 
+
+from cou_user.api.userCourse_routes import router as usercourse_router
 #from cou_admin.api.state_routes import router as state_router
 
 # Configure logging
@@ -35,6 +38,8 @@ async def lifespan(app: FastAPI):
     
     yield  # Allows FastAPI to proceed after startup
     # Add any shutdown actions here if needed
+
+
 
 # Create FastAPI app with the lifespan context
 app = FastAPI(
@@ -74,8 +79,12 @@ app.include_router(currency_router, prefix="/api/v1")
 app.include_router(user_router, prefix="/api/v1")
 app.include_router(course_router, prefix="/api/v1")
 app.include_router(coursecategory_router, prefix="/api/v1")
+
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(mentor_router, prefix="/api/v1")
+
+app.include_router(usercourse_router, prefix="/api/v1")
+
 
 # Debug print routes
 print("\nRegistered routes:")

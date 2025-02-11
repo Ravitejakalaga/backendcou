@@ -13,7 +13,8 @@ class CourseBase(BaseModel):
     language_id: Optional[int]
     is_flagship: Optional[bool] = False
     active: Optional[bool] = True
-
+    price: Optional[float] = 0
+    
 class CourseCreate(CourseBase):
     pass
 

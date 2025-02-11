@@ -1,5 +1,4 @@
 # .env
-
 # Social Media Authentication
 GITHUB_CLIENT_ID=Ov23liNm7FWL3cnVr0yz
 GITHUB_CLIENT_SECRET=b7f65d359c93136ff3b6ae31f34576a78a54716e
