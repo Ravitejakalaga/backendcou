@@ -8,7 +8,11 @@ from cou_admin.api.currency_routes import router as currency_router
 from cou_user.api.user_routes import router as user_router
 from cou_course.api.course_routes import router as course_router
 from cou_course.api.coursecategory_routes import router as coursecategory_router
-
+from cou_course.api.coursesubcategory_routes import router as coursesubcategory_router
+from cou_user.api.job_role_routes import router as job_role_router
+from cou_user.api.skill_routes import router as skill_router
+from cou_onboarding import onboarding_progress_router
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from auth_bl import auth_router
 import logging
@@ -33,6 +37,10 @@ async def lifespan(app: FastAPI):
     from cou_user.models.role import Role
     from cou_user.models.logintype import LoginType
     from cou_user.models.loginhistory import LoginHistory
+    from cou_user.models.job_role import JobRole
+    from cou_user.models.skill import Skill
+    from cou_course.models.coursesubcategory import CourseSubcategory
+    from cou_onboarding.models.onboarding_progress import OnboardingProgress
     
     SQLModel.metadata.create_all(engine)
     
@@ -59,10 +67,15 @@ app = FastAPI(
 async def on_startup():
     create_db_and_tables()
 
+# Root endpoint - redirect to docs
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/docs")
+
 # Add health check endpoint
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    return {"status": "Application is healthy"}
 
 # Add CORS middleware
 app.add_middleware(
@@ -74,16 +87,19 @@ app.add_middleware(
 )
 
 # Include routers with explicit prefixes
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(country_router, prefix="/api/v1")
 app.include_router(currency_router, prefix="/api/v1")
-app.include_router(user_router, prefix="/api/v1")
 app.include_router(course_router, prefix="/api/v1")
 app.include_router(coursecategory_router, prefix="/api/v1")
-
-app.include_router(auth_router, prefix="/api/v1")
+app.include_router(coursesubcategory_router, prefix="/api/v1")
+app.include_router(job_role_router, prefix="/api/v1")
 app.include_router(mentor_router, prefix="/api/v1")
-
+app.include_router(skill_router, prefix="/api/v1")
+app.include_router(user_router, prefix="/api/v1")
 app.include_router(usercourse_router, prefix="/api/v1")
+app.include_router(onboarding_progress_router, prefix="/api/v1")
+
 
 
 # Debug print routes
