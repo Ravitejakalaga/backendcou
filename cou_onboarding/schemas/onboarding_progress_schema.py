@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlmodel import SQLModel, Field
 
 class OnboardingProgressBase(SQLModel):
+    session_id: Optional[UUID] = Field(default=None)  # Now provided from frontend
     step_number: Optional[int] = Field(default=None)
     data: Optional[Dict[str, Any]] = Field(default=None)  # Accepts JSON object with any valid JSON values
     user_id: Optional[UUID] = Field(default=None)  # Explicitly nullable
@@ -15,7 +16,6 @@ class OnboardingProgressUpdate(OnboardingProgressBase):
     pass
 
 class OnboardingProgressResponse(OnboardingProgressBase):
-    session_id: UUID
     created_at: datetime
     updated_at: datetime
 
