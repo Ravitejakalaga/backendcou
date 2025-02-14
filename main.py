@@ -95,10 +95,11 @@ app.include_router(coursecategory_router, prefix="/api/v1")
 app.include_router(coursesubcategory_router, prefix="/api/v1")
 app.include_router(job_role_router, prefix="/api/v1")
 app.include_router(mentor_router, prefix="/api/v1")
+app.include_router(onboarding_progress_router, prefix="/api/v1")
 app.include_router(skill_router, prefix="/api/v1")
 app.include_router(user_router, prefix="/api/v1")
 app.include_router(usercourse_router, prefix="/api/v1")
-app.include_router(onboarding_progress_router, prefix="/api/v1")
+
 
 
 
