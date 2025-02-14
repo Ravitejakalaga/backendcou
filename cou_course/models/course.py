@@ -20,8 +20,10 @@ class Course(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: Optional[int] = None
     updated_by: Optional[int] = None
-    total_enrollments: Optional[int] = Field(default=0)
+    # total_enrollments: Optional[int] = Field(default=0)
     is_flagship: Optional[bool] = Field(default=False)
     active: Optional[bool] = Field(default=True)
     mentor_id: Optional[int] = Field(default=None, foreign_key="cou_user.mentor.id")
     mentor: Optional["Mentor"] = Relationship(back_populates="courses")
+    price: Optional[float] = Field(default=0.0)
+
