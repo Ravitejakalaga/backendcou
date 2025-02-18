@@ -12,7 +12,6 @@ cffi==1.17.1
 charset-normalizer==3.4.1
 click==8.1.8
 colorama==0.4.6
--e git+https://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@github.com:AICloud-COU/intellectual-property.git
 coverage==7.6.10
 crewai==0.11.0
 cryptography==44.0.0
