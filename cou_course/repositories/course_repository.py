@@ -1,6 +1,7 @@
 from typing import Optional, List
 from sqlmodel import Session, select
 from cou_course.models.course import Course
+from cou_user.models.user import User
 
 class CourseRepository:
     @staticmethod
@@ -12,12 +13,20 @@ class CourseRepository:
 
     @staticmethod
     def get_course_by_id(session: Session, course_id: int) -> Optional[Course]:
-        return session.get(Course, course_id)
+        statement = (
+            select(Course)
+            .join(User, Course.mentor_id == User.id)
+            .where(Course.id == course_id)
+        )
+        return session.exec(statement).first()
 
-     
     @staticmethod
     def get_all_courses(session: Session) -> List[Course]:
-        statement = select(Course)
+        statement = (
+            select(Course)
+            .join(User, Course.mentor_id == User.id)
+            .where(User.is_instructor == True)
+        )
         return session.exec(statement).all()
 
     @staticmethod
@@ -41,4 +50,9 @@ class CourseRepository:
     
     @staticmethod
     def get_courses_by_mentor(session: Session, mentor_id: int):
-        return session.exec(select(Course).where(Course.mentor_id == mentor_id)).all()
+        statement = (
+            select(Course)
+            .join(User, Course.mentor_id == User.id)
+            .where(Course.mentor_id == mentor_id)
+        )
+        return session.exec(statement).all()

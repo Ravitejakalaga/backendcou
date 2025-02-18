@@ -62,7 +62,7 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Create database tables on startup
+# Create database tables on startupS
 @app.on_event("startup")
 async def on_startup():
     create_db_and_tables()
