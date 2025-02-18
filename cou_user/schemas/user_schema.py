@@ -25,8 +25,51 @@ class UserBase(SQLModel):
     is_student: Optional[bool] = False
     is_instructor: Optional[bool] = False
 
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "display_name": "John Doe",
+                "first_name": "John",
+                "last_name": "Doe",
+                "work_email": "john.doe@company.com",
+                "personal_email": "john.doe@example.com",
+                "role_id": 2,
+                "login_type_id": 6,
+                "mobile": "+1234567890",
+                "affiliate_id": 1,
+                "facebook": "https://facebook.com/johndoe",
+                "instagram": "https://instagram.com/johndoe",
+                "linkedin": "https://linkedin.com/in/johndoe",
+                "twitter": "https://twitter.com/johndoe",
+                "youtube": "https://youtube.com/c/johndoe",
+                "monitor": False,
+                "remarks": "Some notes about the user",
+                "currency_id": 1,
+                "country_id": 1,
+                "is_student": True,
+                "is_instructor": False
+            }
+        }
+
 class UserCreate(UserBase):
     created_by: int
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "display_name": "John Doe",
+                "first_name": "John",
+                "last_name": "Doe",
+                "personal_email": "john.doe@example.com",
+                "role_id": 2,
+                "login_type_id": 6,
+                "is_student": True,
+                "is_instructor": False,
+                "created_by": 1
+            }
+        }
 
 class UserUpdate(SQLModel):
     display_name: Optional[str] = None
@@ -51,6 +94,23 @@ class UserUpdate(SQLModel):
     is_student: Optional[bool] = None
     is_instructor: Optional[bool] = None
     updated_by: int
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "display_name": "John Doe Updated",
+                "first_name": "John",
+                "last_name": "Doe",
+                "personal_email": "john.doe.updated@example.com",
+                "mobile": "+1234567890",
+                "active": True,
+                "premium": True,
+                "is_student": True,
+                "is_instructor": True,
+                "updated_by": 1
+            }
+        }
 
 class UserRead(UserBase):
     id: int
@@ -87,4 +147,36 @@ class UserRead(UserBase):
         return UserRead(**data)
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "id": 123,
+                "display_name": "John Doe",
+                "first_name": "John",
+                "last_name": "Doe",
+                "work_email": "john.doe@company.com",
+                "personal_email": "john.doe@example.com",
+                "role_id": 2,
+                "login_type_id": 6,
+                "mobile": "+1234567890",
+                "affiliate_id": 1,
+                "facebook": "https://facebook.com/johndoe",
+                "instagram": "https://instagram.com/johndoe",
+                "linkedin": "https://linkedin.com/in/johndoe",
+                "twitter": "https://twitter.com/johndoe",
+                "youtube": "https://youtube.com/c/johndoe",
+                "monitor": False,
+                "remarks": "Some notes about the user",
+                "currency_id": 1,
+                "country_id": 1,
+                "is_student": True,
+                "is_instructor": False,
+                "image_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+                "created_at": "2024-02-14T12:00:00Z",
+                "updated_at": "2024-02-14T12:00:00Z",
+                "active": True,
+                "premium": False,
+                "created_by": 1,
+                "updated_by": 1
+            }
+        }

@@ -44,7 +44,9 @@ class CredentialsAuthService:
                 user_id=user.id,
                 display_name=user.display_name,
                 email=user.personal_email,
-                expires_in=86400
+                expires_in=86400,
+                is_student=user.is_student,
+                is_instructor=user.is_instructor
             )
             
         except HTTPException:
@@ -84,7 +86,9 @@ class CredentialsAuthService:
                     updated_by=0,
                     active=True,
                     created_at=current_time,
-                    updated_at=current_time
+                    updated_at=current_time,
+                    is_student=False,
+                    is_instructor=False
                 )
                 
                 self.db.add(user)
@@ -111,7 +115,9 @@ class CredentialsAuthService:
                 user_id=user.id,
                 display_name=user.display_name,
                 email=user.personal_email,
-                expires_in=86400  # 1 day in seconds
+                expires_in=86400,  # 1 day in seconds
+                is_student=user.is_student,
+                is_instructor=user.is_instructor
             )
             
         except HTTPException:
@@ -184,8 +190,13 @@ class CredentialsAuthService:
         """Create new user in database"""
         try:
             current_time = datetime.now(timezone.utc)
+            
+            display_name = f"{request.first_name} {request.last_name}".strip()
+            
             user = User(
-                display_name=request.display_name,
+                display_name=display_name,
+                first_name=request.first_name,
+                last_name=request.last_name,
                 personal_email=request.email,
                 key=hashed_password,
                 login_type_id=6,  # Email login type
@@ -194,7 +205,9 @@ class CredentialsAuthService:
                 updated_by=0,
                 active=True,
                 created_at=current_time,
-                updated_at=current_time
+                updated_at=current_time,
+                is_student=request.is_student,
+                is_instructor=request.is_instructor
             )
             
             self.db.add(user)
