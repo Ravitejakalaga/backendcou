@@ -10,7 +10,7 @@ pytest-html
 pytest-asyncio
 pytest-cov
 python-jose[cryptography]
-python-dotenv==1.0.0
+python-dotenv
 httpx
 bcrypt
 requests
