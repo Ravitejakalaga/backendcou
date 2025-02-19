@@ -9,6 +9,7 @@ from cou_user.api.user_routes import router as user_router
 from cou_course.api.course_routes import router as course_router
 from cou_course.api.coursecategory_routes import router as coursecategory_router
 from cou_course.api.coursesubcategory_routes import router as coursesubcategory_router
+from cou_student.api.student_routes import router as student_router
 from cou_user.api.job_role_routes import router as job_role_router
 from cou_user.api.skill_routes import router as skill_router
 from cou_onboarding import onboarding_progress_router
@@ -99,6 +100,7 @@ app.include_router(onboarding_progress_router, prefix="/api/v1")
 app.include_router(skill_router, prefix="/api/v1")
 app.include_router(user_router, prefix="/api/v1")
 app.include_router(usercourse_router, prefix="/api/v1")
+app.include_router(student_router, prefix="/api/v1")
 
 
 
