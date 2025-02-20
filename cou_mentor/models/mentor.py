@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 
 if TYPE_CHECKING:
     from cou_user.models.user import User
-    from cou_course.models.course import Course
 
 
 class Mentor(SQLModel, table=True):
@@ -16,13 +15,11 @@ class Mentor(SQLModel, table=True):
     bio: Optional[str] = None
     expertise: Optional[str] = Field(default=None, max_length=500)
     rating: Optional[float] = Field(default=0.0)
-    # total_students: Optional[int] = Field(default=0)
     is_available: Optional[bool] = Field(default=True)  
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user: Optional["User"] = Relationship(back_populates="mentor")
-    courses: List["Course"] = Relationship(back_populates="mentor")
     
     @property
     def total_students(self) -> int:
-        return sum(course.total_enrollments for course in self.courses) if self.courses else 0
+        return sum(course.total_enrollments for course in self.user.courses) if self.user and self.user.courses else 0
