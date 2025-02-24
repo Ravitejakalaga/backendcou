@@ -5,7 +5,6 @@
 uvicorn main:app --reload
 uvicorn main:app --reload --log-level debug
 
-python -m uvicorn main:app --reload
 
 vercel (vercel deploy the code into the vercel server):
 --------------------------------------------------------------------------------------------------------------

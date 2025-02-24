@@ -81,10 +81,17 @@ async def health_check():
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_origins=[
+        "http://localhost:3000",
+        "https://cou-ip-bkend-dev.vercel.app", 
+        "https://*.vercel.app",
+        "https://backendcou-r4846xwah-projectcou.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],  # Allow frontend to read custom headers
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Include routers with explicit prefixes
