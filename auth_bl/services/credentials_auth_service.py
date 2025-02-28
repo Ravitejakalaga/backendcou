@@ -67,41 +67,17 @@ class CredentialsAuthService:
             user = self._get_user_by_email(request.email)
             
             if not user:
-                # Auto-register user if not found
-                # Extract display name from email (part before @)
-                display_name = request.email.split('@')[0]
-                
-                # Hash password
-                hashed_password = self._hash_password(request.password)
-                
-                # Create new user with default role (2 for regular user)
-                current_time = datetime.now(timezone.utc)
-                user = User(
-                    display_name=display_name,
-                    personal_email=request.email,
-                    key=hashed_password,
-                    login_type_id=6,  # Email login type
-                    role_id=2,  # Regular user role
-                    created_by=0,
-                    updated_by=0,
-                    active=True,
-                    created_at=current_time,
-                    updated_at=current_time,
-                    is_student=False,
-                    is_instructor=False
+                raise HTTPException(
+                    status_code=401,
+                    detail="Account not found. Please register first."
                 )
-                
-                self.db.add(user)
-                self.db.commit()
-                self.db.refresh(user)
-                logger.info(f"Auto-registered new user with email: {request.email}")
-            else:
-                # Verify password for existing user
-                if not self._verify_password(request.password, user.key):
-                    raise HTTPException(
-                        status_code=401,
-                        detail="Invalid email or password"
-                    )
+
+            # Verify password for existing user
+            if not self._verify_password(request.password, user.key):
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid email or password"
+                )
 
             # Create login history
             await self._create_login_history(user.id, user.role_id)
