@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy.sql import select
 from cou_course.models.course import Course
 from cou_user.models.userCourse import UserCourse
+from sqlalchemy import and_
 from cou_user.schemas.userCourse_schema import UserCourseCreate, UserCourseRead, UserCourseDetailRead
 # from cou_user.repositories.userCourse_repository import UserCourseRepository
 from common.database import get_session
@@ -16,6 +17,7 @@ from cou_user.repositories.userCourse_repository import (
 )
 from cou_course.repositories.course_repository import CourseRepository
 from datetime import datetime, timezone
+from sqlalchemy import update
 
 
 router = APIRouter(
@@ -43,14 +45,14 @@ def list_usercourses_route(user_id: int, session: Session = Depends(get_session)
     statement = (
         select(UserCourse, Course)
         .join(Course, Course.id == UserCourse.course_id)
-        .where(UserCourse.user_id == user_id)
+        .where(and_(UserCourse.user_id == user_id, UserCourse.is_enrolled == False))
     )
     results = session.exec(statement).all()
     
     # Combine UserCourse and Course data
     user_course_details = [
         UserCourseDetailRead(
-            id=usercourse.id,
+            id=usercourse.id, 
             user_id=usercourse.user_id,
             course_id=usercourse.course_id,
             transaction_id=usercourse.transaction_id,
@@ -88,34 +90,97 @@ def update_usercourse(usercourse_id: int, usercourse: UserCourseCreate, session:
     usercourse_data = usercourse.dict(exclude_unset=True)
     return repo.update_usercourse(usercourse_id, usercourse_data)
 
+
+# deleting course from cart
 @router.delete("/")
 def delete_userCourse(user_id: int, course_id: int, session: Session = Depends(get_session)):
     status = delete_usercourse(session, user_id, course_id)
     return {"ok": status}
 
-@router.post("/enroll", response_model=UserCourseRead)
-def enroll_in_free_course(user_id: int, course_id: int, session: Session = Depends(get_session)):
+
+# early it was enroll_in_free_course but i think it is not a good thing seprating in enrollment and free enrollment we can make it simple enroll in which will handle both free and paid courses
+
+
+
+# Putting courses in cart with enrollment status false
+@router.post("/cart", response_model=UserCourseRead)
+def cart(user_id: int, course_id: int, session: Session = Depends(get_session)):
+    print("Tried Calling Cart")
     # Check if the course is free
     course = CourseRepository.get_course_by_id(session, course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     
-    if course.price > 0:
-        raise HTTPException(status_code=400, detail="Course is not free")
-
-    # Check if the user is already enrolled
     existing_enrollment = get_usercourse(session, user_id, course_id)
+
     if existing_enrollment:
         raise HTTPException(status_code=400, detail="User is already enrolled in this course")
 
-    # Enroll the user
+
     usercourse = UserCourse(
-        user_id=user_id,
-        course_id=course_id,
-        is_enrolled=True,
-        enrollment_date=datetime.now(timezone.utc)
+       user_id=user_id,
+       course_id=course_id,
+       cart_date=datetime.now(timezone.utc) , 
+       is_enrolled=False,
+       price=course.price
     )
+
     session.add(usercourse)
     session.commit()
     session.refresh(usercourse)
+
     return usercourse
+
+
+
+# Enroll all courses in cart
+@router.post("/enroll-all", response_model=list[UserCourseRead])
+def enroll_all_cart_courses(user_id: int, session: Session = Depends(get_session)):
+    try:
+        # First get all unenrolled courses
+        statement = select(UserCourse).where(
+            (UserCourse.user_id == user_id) & 
+            (UserCourse.is_enrolled == False)
+        )
+        cart_courses = session.exec(statement).all()
+        
+        if not cart_courses:
+            raise HTTPException(status_code=404, detail="No courses found in cart")
+        
+        current_time = datetime.now(timezone.utc)
+        
+        # Update all matching records
+        for course in cart_courses:
+            course.is_enrolled = True
+            course.enrollment_date = current_time
+            course.updated_at = current_time
+        
+        # Commit the changes
+        session.commit()
+        
+        # Convert the updated courses to the response model format
+        updated_courses = []
+        for course in cart_courses:
+            course_dict = {
+                "id": course.id,
+                "user_id": course.user_id,
+                "course_id": course.course_id,
+                "transaction_id": course.transaction_id,
+                "cart_date": course.cart_date,
+                "is_enrolled": course.is_enrolled,
+                "enrollment_date": course.enrollment_date,
+                "course_completion_status": course.course_completion_status,
+                "created_at": course.created_at,
+                "updated_at": course.updated_at,
+                "created_by": course.created_by,
+                "updated_by": course.updated_by,
+                "active": course.active
+            }
+            updated_courses.append(course_dict)
+        
+        return updated_courses
+    
+    except Exception as e:
+        session.rollback()
+        print(f"Error details: {str(e)}")  # For debugging
+        raise HTTPException(status_code=500, detail=f"Failed to enroll courses: {str(e)}")

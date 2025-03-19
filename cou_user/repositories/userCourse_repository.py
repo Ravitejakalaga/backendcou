@@ -47,6 +47,6 @@ def update_usercourse(session: Session, usercourse_id: int, usercourse_data: dic
 
 def delete_usercourse(session: Session, user_id: int, course_id: int):
     usercourse = get_usercourse(session, user_id, course_id)
-    print("usercourse is finneddd", usercourse)
+
     session.delete(usercourse)
     session.commit()

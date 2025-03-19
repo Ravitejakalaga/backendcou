@@ -4,7 +4,7 @@ from datetime import datetime , timezone
 from uuid import UUID
 
 class UserCourse(SQLModel, table=True):
-    __tablename__ = "usercourse"
+    __tablename__ = "user_course"
     __table_args__ = {"schema": "cou_user"}
 
     id: Optional[int] = Field(default=None, primary_key=True)
