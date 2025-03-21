@@ -87,7 +87,8 @@ app.add_middleware(
         "https://*.vercel.app",
         "https://backendcou-r4846xwah-projectcou.vercel.app"
         "https://frontend-ovltx2las-projectcou.vercel.app",
-        "http://dev.CloudOU.vercel.com"
+        "http://dev.CloudOU.vercel.com",
+        "https://frontend-ovltx2las-projectcou.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
