@@ -139,7 +139,7 @@ class GoogleAuthService:
                 detail=f"Failed to create login history: {str(e)}"
             )
 
-    async def _get_or_create_user(self, user_info: dict, login_type_id: int, role_id: int) -> User:
+    async def _get_or_create_user(self, user_info: dict, login_type_id: int, role_id: int, is_student: bool = False, is_instructor: bool = False) -> User:
         """Get existing user or create new one"""
         try:
             if not user_info.get('email'):
@@ -167,7 +167,9 @@ class GoogleAuthService:
                         login_type_id=login_type_id,
                         created_by=0,
                         updated_by=0,
-                        active=True
+                        active=True,
+                        is_student=is_student,
+                        is_instructor=is_instructor
                     )
                     
                     if user_info.get('picture'):
@@ -179,7 +181,12 @@ class GoogleAuthService:
                     logger.info(f"Successfully created new user with id: {user.id}")
                 else:
                     logger.info(f"Updating existing user with id: {user.id}")
-                    # Update existing user's display name and other details
+                    # Only update user type if this is first login (no previous type set)
+                    if not user.is_student and not user.is_instructor:
+                        user.is_student = is_student
+                        user.is_instructor = is_instructor
+                    
+                    # Update other user details
                     user.display_name = user_info['name']
                     user.first_name = user_info['name'].split(' ', 1)[0]
                     user.last_name = user_info['name'].split(' ', 1)[1] if len(user_info['name'].split(' ', 1)) > 1 else ""
@@ -205,9 +212,6 @@ class GoogleAuthService:
                     detail=f"Database error in user operation: {str(db_error)}"
                 )
             
-            logger.info(f"User info from Google: {user_info}")
-            logger.info(f"User details after update/create: id={user.id}, display_name={user.display_name}, email={user.personal_email}")
-            
             return user
             
         except HTTPException:
@@ -229,7 +233,7 @@ class GoogleAuthService:
         except Exception as e:
             logger.error(f"Failed to download profile picture: {str(e)}")
 
-    async def authenticate(self, code: str, redirect_uri: str, state: Optional[str] = None) -> dict:
+    async def authenticate(self, code: str, redirect_uri: str, state: Optional[str] = None, is_student: bool = False, is_instructor: bool = False) -> dict:
         """Complete Google authentication flow"""
         try:
             # Exchange code for token
@@ -249,7 +253,13 @@ class GoogleAuthService:
             role_id = 1
             
             # Find or create user
-            user = await self._get_or_create_user(user_info, login_type.id, role_id)
+            user = await self._get_or_create_user(
+                user_info, 
+                login_type.id, 
+                role_id,
+                is_student=is_student,
+                is_instructor=is_instructor
+            )
             
             # Create login history record
             await self._create_login_history(user.id, role_id)
@@ -272,7 +282,9 @@ class GoogleAuthService:
                 "display_name": user.display_name,
                 "email": user.personal_email,
                 "profile_image": profile_image,
-                "expires_in": 86400  # 1 day in seconds
+                "expires_in": 86400,  # 1 day in seconds
+                "is_student": user.is_student,
+                "is_instructor": user.is_instructor
             }
             
         except HTTPException:
