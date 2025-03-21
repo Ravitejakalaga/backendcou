@@ -42,6 +42,8 @@ async def github_callback(
     - **code**: The OAuth code received from GitHub
     - **redirect_uri**: The redirect URI used in the OAuth flow (Next.js frontend callback)
     - **state**: Optional state parameter for maintaining application state
+    - **is_student**: Whether the user is registering as a student
+    - **is_instructor**: Whether the user is registering as an instructor
     
     Returns a JWT token and user information with optional redirect path
     """
@@ -58,7 +60,9 @@ async def github_callback(
         return await service.authenticate(
             auth_request.code,
             auth_request.redirect_uri,
-            auth_request.state
+            auth_request.state,
+            is_student=auth_request.is_student,
+            is_instructor=auth_request.is_instructor
         )
     except HTTPException as e:
         # Re-raise HTTP exceptions with error_uri field
@@ -92,6 +96,8 @@ async def facebook_callback(
     - **code**: The OAuth code received from Facebook
     - **redirect_uri**: The redirect URI used in the OAuth flow (Next.js frontend callback)
     - **state**: Optional state parameter for maintaining application state
+    - **is_student**: Whether the user is registering as a student
+    - **is_instructor**: Whether the user is registering as an instructor
     
     Returns a JWT token and user information with optional redirect path
     """
@@ -107,7 +113,9 @@ async def facebook_callback(
     return await service.authenticate(
         auth_request.code,
         auth_request.redirect_uri,
-        auth_request.state
+        auth_request.state,
+        is_student=auth_request.is_student,
+        is_instructor=auth_request.is_instructor
     )
 
 @router.post(
@@ -127,6 +135,8 @@ async def google_callback(
     - **code**: The OAuth code received from Google
     - **redirect_uri**: The redirect URI used in the OAuth flow
     - **state**: Optional state parameter for maintaining application state
+    - **is_student**: Whether the user is registering as a student
+    - **is_instructor**: Whether the user is registering as an instructor
     
     Returns a JWT token and user information with optional redirect path
     """
@@ -143,7 +153,9 @@ async def google_callback(
         return await service.authenticate(
             auth_request.code,
             auth_request.redirect_uri,
-            auth_request.state
+            auth_request.state,
+            is_student=auth_request.is_student,
+            is_instructor=auth_request.is_instructor
         )
     except Exception as e:
         logger.error(f"Google auth error: {str(e)}")

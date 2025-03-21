@@ -207,69 +207,13 @@ class GitHubAuthService:
             logger.error(f"Error creating login history: {str(e)}")
             # Don't raise the exception as login history is not critical
 
-    async def authenticate(self, code: str, redirect_uri: str, state: Optional[str] = None) -> dict:
-        """Complete GitHub authentication flow"""
-        try:
-            # Validate state if provided
-            state_data = self._validate_state(state)
-            
-            # Exchange code for token
-            token_response = await self.exchange_code_for_token(code, redirect_uri)
-            
-            # Get user info
-            github_user = await self.get_user_info(token_response["access_token"])
-            
-            # Get or create login type
-            login_type = await self._get_or_create_login_type()
-            
-            # Use admin role (role_id = 1)
-            role_id = 1
-            
-            # Find or create user
-            user = await self._get_or_create_user(
-                github_user,
-                login_type.id,
-                role_id
-            )
-            
-            # Create login history record
-            await self._create_login_history(user.id, role_id)
-            
-            # Generate JWT token
-            access_token = create_access_token(user.id)
-            
-            # Convert image to base64 if it exists
-            profile_image = None
-            if user.image:
-                try:
-                    profile_image = f"data:image/png;base64,{base64.b64encode(user.image).decode('utf-8')}"
-                except Exception as e:
-                    logger.error(f"Error encoding profile image: {str(e)}")
-            
-            response = {
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user_id": user.id,
-                "display_name": user.display_name,
-                "email": user.personal_email,
-                "profile_image": profile_image,
-                "expires_in": 86400  # 1 day in seconds
-            }
-            
-            # Add redirect path from state if available
-            if state_data:
-                response["redirect_path"] = state_data.redirectPath
-
-            return response
-        except Exception as e:
-            logger.error(f"Authentication error: {str(e)}")
-            raise HTTPException(status_code=400, detail=str(e))
-
     async def _get_or_create_user(
         self,
         github_user: dict,
         login_type_id: int,
-        role_id: int
+        role_id: int,
+        is_student: bool = False,
+        is_instructor: bool = False
     ) -> User:
         """Get or create user from GitHub data"""
         email = github_user.get("email")
@@ -281,6 +225,11 @@ class GitHubAuthService:
             user = self.db.exec(statement).first()
             
             if user:
+                # Only update user type if this is first login (no previous type set)
+                if not user.is_student and not user.is_instructor:
+                    user.is_student = is_student
+                    user.is_instructor = is_instructor
+                
                 # Update existing user
                 user.display_name = github_user["login"]
                 user.first_name = github_user.get("name")
@@ -312,7 +261,9 @@ class GitHubAuthService:
             key=github_user["html_url"],
             currency_id=None,
             country_id=None,
-            affiliate_id=None
+            affiliate_id=None,
+            is_student=is_student,
+            is_instructor=is_instructor
         )
         
         # Set profile image
@@ -335,3 +286,65 @@ class GitHubAuthService:
                     print(f"Failed to download profile image from {image_url}: Status {response.status_code}")
         except Exception as e:
             print(f"Error downloading profile image from {image_url}: {str(e)}") 
+
+    async def authenticate(self, code: str, redirect_uri: str, state: Optional[str] = None, is_student: bool = False, is_instructor: bool = False) -> dict:
+        """Complete GitHub authentication flow"""
+        try:
+            # Validate state if provided
+            state_data = self._validate_state(state)
+            
+            # Exchange code for token
+            token_response = await self.exchange_code_for_token(code, redirect_uri)
+            
+            # Get user info
+            github_user = await self.get_user_info(token_response["access_token"])
+            
+            # Get or create login type
+            login_type = await self._get_or_create_login_type()
+            
+            # Use admin role (role_id = 1)
+            role_id = 1
+            
+            # Find or create user
+            user = await self._get_or_create_user(
+                github_user,
+                login_type.id,
+                role_id,
+                is_student=is_student,
+                is_instructor=is_instructor
+            )
+            
+            # Create login history record
+            await self._create_login_history(user.id, role_id)
+            
+            # Generate JWT token
+            access_token = create_access_token(user.id)
+            
+            # Convert image to base64 if it exists
+            profile_image = None
+            if user.image:
+                try:
+                    profile_image = f"data:image/png;base64,{base64.b64encode(user.image).decode('utf-8')}"
+                except Exception as e:
+                    logger.error(f"Error encoding profile image: {str(e)}")
+            
+            response = {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user_id": user.id,
+                "display_name": user.display_name,
+                "email": user.personal_email,
+                "profile_image": profile_image,
+                "expires_in": 86400,  # 1 day in seconds
+                "is_student": user.is_student,
+                "is_instructor": user.is_instructor
+            }
+            
+            # Add redirect path from state if available
+            if state_data:
+                response["redirect_path"] = state_data.redirectPath
+
+            return response
+        except Exception as e:
+            logger.error(f"Authentication error: {str(e)}")
+            raise HTTPException(status_code=400, detail=str(e)) 
