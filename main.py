@@ -86,6 +86,8 @@ app.add_middleware(
         "https://cou-ip-bkend-dev.vercel.app", 
         "https://*.vercel.app",
         "https://backendcou-r4846xwah-projectcou.vercel.app"
+        "https://frontend-ovltx2las-projectcou.vercel.app",
+        "http://dev.CloudOU.vercel.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
