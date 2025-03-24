@@ -6,7 +6,6 @@ class CourseCategoryBase(BaseModel):
     name: str
     is_flagship: Optional[bool] = False
     active: Optional[bool] = True
-    is_IT: Optional[bool] = False
 
 class CourseCategoryCreate(CourseCategoryBase):
     pass
@@ -23,5 +22,4 @@ class CourseCategoryUpdate(BaseModel):
     name: Optional[str] = None
     is_flagship: Optional[bool] = None
     active: Optional[bool] = None
-    is_IT: Optional[bool] = None
     updated_at: Optional[datetime] = datetime.utcnow()

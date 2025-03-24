@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 class CourseCategory(SQLModel, table=True):
-    __tablename__ = "course_category"
+    __tablename__ = "coursecategory"
     __table_args__ = {"schema": "cou_course"}
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -14,4 +14,3 @@ class CourseCategory(SQLModel, table=True):
     updated_by: Optional[int] = None
     is_flagship: bool = Field(default=False)
     active: bool = Field(default=True)
-    is_IT: bool = Field(default=False)
