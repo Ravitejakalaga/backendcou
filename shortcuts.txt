@@ -8,19 +8,21 @@ uvicorn main:app --reload --log-level debug
 
 vercel (vercel deploy the code into the vercel server):
 --------------------------------------------------------------------------------------------------------------
-Install Vercel CLI
+---Install Vercel CLI---
 npm install -g vercel
 
-Login to Vercel
+---Login to Vercel---
 vercel login
 
-Deploy your project
+vercel link
+
+---Deploy your project---
 vercel
 
-Deploy a specific project
+---Deploy a specific project---
 vercel --prod
 
-vercel link
+
 vercel logs <deployment-url>
 
 PIP Commands:

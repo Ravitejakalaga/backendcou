@@ -83,13 +83,20 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "http://localhost:3004",
+        "http://localhost",
+        "http://localhost:*",
         "https://cou-ip-bkend-dev.vercel.app", 
         "https://*.vercel.app",
         "https://backendcou-r4846xwah-projectcou.vercel.app",
-        "http://dev.CloudOU.vercel.com",
+        "https://dev.CloudOU.vercel.com",
         "https://frontend-ovltx2las-projectcou.vercel.app",
-        "https://frontend-cou.vercel.app/",
-        "https://dev-cloudou-gtbnajf0f6cvd2ar.centralindia-01.azurewebsites.net/"
+        "https://frontend-cou.vercel.app",
+        "https://dev-cloudou-gtbnajf0f6cvd2ar.centralindia-01.azurewebsites.net",
+        "http://dev-cloudou-gtbnajf0f6cvd2ar.centralindia-01.azurewebsites.net"
     ],
     allow_credentials=True,
     allow_methods=["*"],
