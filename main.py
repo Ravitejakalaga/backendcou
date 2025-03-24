@@ -85,10 +85,11 @@ app.add_middleware(
         "http://localhost:3000",
         "https://cou-ip-bkend-dev.vercel.app", 
         "https://*.vercel.app",
-        "https://backendcou-r4846xwah-projectcou.vercel.app"
-        "https://frontend-ovltx2las-projectcou.vercel.app",
+        "https://backendcou-r4846xwah-projectcou.vercel.app",
         "http://dev.CloudOU.vercel.com",
-        "https://frontend-ovltx2las-projectcou.vercel.app"
+        "https://frontend-ovltx2las-projectcou.vercel.app",
+        "https://frontend-cou.vercel.app/",
+        "https://dev-cloudou-gtbnajf0f6cvd2ar.centralindia-01.azurewebsites.net/"
     ],
     allow_credentials=True,
     allow_methods=["*"],
