@@ -6,17 +6,17 @@ class Settings(BaseSettings):
     # Google OAuth settings
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
-    GOOGLE_REDIRECT_URI: str = "http://localhost:3000/auth/google/callback"
+    GOOGLE_REDIRECT_URI: str
     
     # GitHub OAuth settings
     GITHUB_CLIENT_ID: str
     GITHUB_CLIENT_SECRET: str
-    GITHUB_REDIRECT_URI: str = "http://localhost:3000/auth/github/callback"
+    GITHUB_REDIRECT_URI: str
     
     # Facebook OAuth settings
     FACEBOOK_CLIENT_ID: str
     FACEBOOK_CLIENT_SECRET: str
-    FACEBOOK_REDIRECT_URI: str = "http://localhost:3000/auth/facebook/callback"
+    FACEBOOK_REDIRECT_URI: str
     
     # JWT settings
     JWT_SECRET_KEY: str

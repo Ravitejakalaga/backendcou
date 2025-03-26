@@ -7,6 +7,7 @@ from ...services.google_auth.google_auth_service import GoogleAuthService
 from ...services.credentials_auth_service import CredentialsAuthService
 from ...utils.oauth2 import get_current_user, oauth2_scheme
 from ...utils.jwt_utils import create_access_token
+from ...utils.config import get_settings
 from typing import Annotated
 from common.database import get_session
 from cou_user.models.user import User
@@ -18,6 +19,7 @@ import requests
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 router = APIRouter(
     prefix="/auth",
@@ -48,8 +50,8 @@ async def github_callback(
     Returns a JWT token and user information with optional redirect path
     """
     try:
-        # Validate redirect URI
-        expected_redirect_uri = "http://localhost:3000/api/auth/callback/github"
+        # Validate redirect URI using settings
+        expected_redirect_uri = settings.GITHUB_REDIRECT_URI
         if auth_request.redirect_uri != expected_redirect_uri:
             raise HTTPException(
                 status_code=400,
@@ -101,22 +103,37 @@ async def facebook_callback(
     
     Returns a JWT token and user information with optional redirect path
     """
-    # Validate redirect URI
-    expected_redirect_uri = "http://localhost:3000/api/auth/callback/facebook"
-    if auth_request.redirect_uri != expected_redirect_uri:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid redirect URI. Expected: {expected_redirect_uri}"
+    try:
+        # Validate redirect URI using settings
+        expected_redirect_uri = settings.FACEBOOK_REDIRECT_URI
+        if auth_request.redirect_uri != expected_redirect_uri:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid redirect URI. Expected: {expected_redirect_uri}"
+            )
+        
+        service = FacebookAuthService(db, request)
+        return await service.authenticate(
+            auth_request.code,
+            auth_request.redirect_uri,
+            auth_request.state,
+            is_student=auth_request.is_student,
+            is_instructor=auth_request.is_instructor
         )
-    
-    service = FacebookAuthService(db, request)
-    return await service.authenticate(
-        auth_request.code,
-        auth_request.redirect_uri,
-        auth_request.state,
-        is_student=auth_request.is_student,
-        is_instructor=auth_request.is_instructor
-    )
+    except HTTPException as e:
+        # Re-raise HTTP exceptions with error_uri field
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=str(e.detail),
+            headers={"error_uri": "/"}  # Redirect to home page
+        )
+    except Exception as e:
+        # Handle other exceptions
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+            headers={"error_uri": "/"}  # Redirect to home page
+        )
 
 @router.post(
     "/google/callback",
@@ -141,8 +158,8 @@ async def google_callback(
     Returns a JWT token and user information with optional redirect path
     """
     try:
-        # Validate redirect URI
-        expected_redirect_uri = "http://localhost:3000/api/auth/callback/google"
+        # Validate redirect URI using settings
+        expected_redirect_uri = settings.GOOGLE_REDIRECT_URI
         if auth_request.redirect_uri != expected_redirect_uri:
             raise HTTPException(
                 status_code=400,
