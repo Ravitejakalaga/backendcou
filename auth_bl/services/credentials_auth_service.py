@@ -18,6 +18,7 @@ class CredentialsAuthService:
         """Handle user registration with email and password"""
         try:
             logger.info(f"Registration attempt for email: {request.email}")
+            logger.info(f"Registration details - is_student: {request.is_student}, is_instructor: {request.is_instructor}")
             
             # Check if email already exists
             if self._get_user_by_email(request.email):
@@ -31,6 +32,9 @@ class CredentialsAuthService:
             
             # Create new user
             user = self._create_user(request, hashed_password)
+            
+            # Log user creation values
+            logger.info(f"User created with - is_student: {user.is_student}, is_instructor: {user.is_instructor}")
             
             # Create login history
             await self._create_login_history(user.id, user.role_id)
@@ -165,6 +169,7 @@ class CredentialsAuthService:
     def _create_user(self, request: EmailRegisterRequest, hashed_password: str) -> User:
         """Create new user in database"""
         try:
+            logger.info(f"Creating user with - is_student: {request.is_student}, is_instructor: {request.is_instructor}")
             current_time = datetime.now(timezone.utc)
             
             display_name = f"{request.first_name} {request.last_name}".strip()
