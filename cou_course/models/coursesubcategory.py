@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime, timezone
 
 class CourseSubcategory(SQLModel, table=True):
-    __tablename__ = "coursesubcategory"
+    __tablename__ = "course_subcategory"
     __table_args__ = {"schema": "cou_course"}
 
     id: Optional[int] = Field(default=None, primary_key=True)
