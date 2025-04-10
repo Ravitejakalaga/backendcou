@@ -24,6 +24,9 @@ class CourseBase(BaseModel):
     active: Optional[bool] = True
     price: Optional[float] = 0
     ratings: Optional[float] = 0.0
+    IT: Optional[bool] = False
+    Coding_Required: Optional[bool] = False
+    Avg_Completion_Time: Optional[int] = None
     
 class CourseCreate(CourseBase):
     pass

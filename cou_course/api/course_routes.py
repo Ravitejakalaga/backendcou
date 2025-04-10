@@ -8,7 +8,7 @@ from common.database import get_session
 from typing import Optional, List
 from fastapi import Query
 import logging
-router = APIRouter()
+from cou_course.schemas.course_filters_schema import CourseFilters, CourseFilterRequest
 
 router = APIRouter(
     prefix="/courses",
@@ -20,49 +20,37 @@ def create_course(course: CourseCreate, session: Session = Depends(get_session))
     course_model = Course(**course.dict())
     return CourseRepository.create_course(session, course_model)
 
-@router.get("/filter", response_model=List[CourseRead])
-def get_courses(
-    session: Session = Depends(get_session),
-    category_id: Optional[int] = Query(None),
-    subcategory_id: Optional[int] = Query(None),
-    course_type_id: Optional[int] = Query(None),
-    sells_type_id: Optional[int] = Query(None),
-    language_id: Optional[int] = Query(None),
-    mentor_id: Optional[int] = Query(None),
-    is_flagship: Optional[bool] = Query(None),
-    active: Optional[bool] = Query(None),
-    min_price: Optional[float] = Query(None),
-    max_price: Optional[float] = Query(None),
-    min_ratings: Optional[float] = Query(None),
-    max_ratings: Optional[float] = Query(None),
+@router.post("/filter", response_model=List[CourseRead])
+def filter_courses(
+    filters: CourseFilterRequest,
+    session: Session = Depends(get_session)
 ):
     """
-    Get all courses or filter them by optional query parameters.
-    Examples:
-      - GET /courses (no filters => returns all courses)
-      - GET /courses?category_id=2
-      - GET /courses?language_id=3&active=true
-      - GET /courses?min_price=0&max_price=100
-      - GET /courses?min_ratings=4
-      - GET /courses?subcategory_id=5&course_type_id=1
+    Filter courses based on multiple criteria:
+    - IT/Non-IT category
+    - Coding/Non-Coding category
+    - Course category
+    - Course level
+    - Price type (free/paid)
+    - Price range
+    - Completion time range
     """
-    logging.debug("hey")
-    courses = CourseRepository.filter_courses(
+    return CourseRepository.filter_courses(
         session=session,
-        category_id=category_id,
-        subcategory_id=subcategory_id,
-        course_type_id=course_type_id,
-        sells_type_id=sells_type_id,
-        language_id=language_id,
-        mentor_id=mentor_id,
-        is_flagship=is_flagship,
-        active=active,
-        min_price=min_price,
-        max_price=max_price,
-        min_ratings=min_ratings,
-        max_ratings=max_ratings
+        category_id=filters.category_id,
+        it_non_it=filters.it_non_it,
+        coding_non_coding=filters.coding_non_coding,
+        level=filters.level,
+        price_type=filters.price_type,
+        min_price=filters.min_price,
+        max_price=filters.max_price,
+        completion_time=filters.completion_time,
+        active=True  # Only show active courses
     )
-    return courses
+
+@router.get("/filters", response_model=CourseFilters)
+def get_filters(session: Session = Depends(get_session)):
+    return CourseRepository.get_filters(session)
 
 @router.get("/{course_id}", response_model=CourseRead)
 def get_course(course_id: int, session: Session = Depends(get_session)):

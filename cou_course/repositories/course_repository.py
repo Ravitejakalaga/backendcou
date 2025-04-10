@@ -3,6 +3,9 @@ from sqlmodel import Session, select
 from cou_course.models.course import Course
 from cou_user.models.user import User
 import logging
+from cou_course.models.coursecategory import CourseCategory
+from cou_course.models.coursesubcategory import CourseSubcategory
+from cou_course.models.coursetype import CourseType
 
 class CourseRepository:
     @staticmethod
@@ -58,6 +61,63 @@ class CourseRepository:
         )
         return session.exec(statement).all()
     
+    @staticmethod
+    def get_filters(session: Session):
+        """
+        Get all possible filter options for courses including:
+        - IT/Non-IT categories
+        - Coding/Non-Coding categories
+        - Course categories
+        - Course levels
+        - Price options
+        - Average completion time ranges
+        """
+        # Get all categories
+        categories = session.exec(select(CourseCategory).where(CourseCategory.active == True)).all()
+        
+        # Get all subcategories
+        subcategories = session.exec(select(CourseSubcategory).where(CourseSubcategory.active == True)).all()
+        
+        # Get all course types
+        course_types = session.exec(select(CourseType).where(CourseType.active == True)).all()
+
+        # Predefined filters based on the UI requirements
+        it_non_it = ["IT", "Non IT"]
+        coding_non_coding = ["Coding", "Non-Coding"]
+        
+        # Price options
+        price_options = [
+            {"id": "free", "label": "Free", "value": 0},
+            {"id": "paid", "label": "Paid", "value": None}
+        ]
+        
+        # Completion time ranges
+        completion_time_ranges = [
+            {"id": "less_than_5", "label": "Less than 5 hours", "min": 0, "max": 5},
+            {"id": "5_10", "label": "5-10 hours", "min": 5, "max": 10},
+            {"id": "11_15", "label": "11-15 hours", "min": 11, "max": 15},
+            {"id": "16_22", "label": "16-22 hours", "min": 16, "max": 22}
+        ]
+        
+        # Course levels
+        levels = [
+            {"id": "beginner", "label": "Beginner"},
+            {"id": "intermediate", "label": "Intermediate"},
+            {"id": "advanced", "label": "Advanced"}
+        ]
+        
+        return {
+            "it_non_it": [{"id": x.lower().replace(" ", "_"), "label": x} for x in it_non_it],
+            "coding_non_coding": [{"id": x.lower().replace(" ", "_"), "label": x} for x in coding_non_coding],
+            "criteria": {
+                "categories": [{"id": cat.id, "label": cat.name} for cat in categories],
+                "levels": levels
+            },
+            "preferences": {
+                "price": price_options,
+                "completion_time": completion_time_ranges
+            }
+        }
     
     @staticmethod
     def filter_courses(
@@ -73,30 +133,19 @@ class CourseRepository:
         min_price: Optional[float] = None,
         max_price: Optional[float] = None,
         min_ratings: Optional[float] = None,
-        max_ratings: Optional[float] = None
+        max_ratings: Optional[float] = None,
+        it_non_it: Optional[str] = None,
+        coding_non_coding: Optional[str] = None,
+        level: Optional[str] = None,
+        price_type: Optional[str] = None,
+        completion_time: Optional[str] = None
     ) -> List[Course]:
         """
-        Dynamically filter courses based on provided optional parameters.
-        If none are provided, it returns all courses.
+        Enhanced filter courses based on all available filter options.
         """
-        logging.debug("Filter parameters: %s", {
-            "category_id": category_id,
-            "subcategory_id": subcategory_id,
-            "course_type_id": course_type_id,
-            "sells_type_id": sells_type_id,
-            "language_id": language_id,
-            "mentor_id": mentor_id,
-            "is_flagship": is_flagship,
-            "active": active,
-            "min_price": min_price,
-            "max_price": max_price,
-            "min_ratings": min_ratings,
-            "max_ratings": max_ratings
-        })
-
         query = select(Course)
 
-        # 1) Match exact column values
+        # Basic filters
         if category_id is not None:
             query = query.where(Course.category_id == category_id)
         if subcategory_id is not None:
@@ -109,25 +158,53 @@ class CourseRepository:
             query = query.where(Course.language_id == language_id)
         if mentor_id is not None:
             query = query.where(Course.mentor_id == mentor_id)
-
-        # 2) Boolean flags
         if is_flagship is not None:
             query = query.where(Course.is_flagship == is_flagship)
         if active is not None:
             query = query.where(Course.active == active)
 
-        # 3) Ranges for price
+        # IT/Non-IT filter - now using the IT boolean field directly
+        if it_non_it:
+            query = query.where(Course.IT == (it_non_it.lower() == "it"))
+
+        # Coding/Non-Coding filter - now using the Coding_Required boolean field directly
+        if coding_non_coding:
+            query = query.where(Course.Coding_Required == (coding_non_coding.lower() == "coding"))
+
+        # Level filter - now using the Course_level field directly
+        if level:
+            query = query.where(Course.Course_level == level.lower())
+
+        # Price type filter
+        if price_type == "free":
+            query = query.where(Course.price == 0)
+        elif price_type == "paid":
+            query = query.where(Course.price > 0)
+
+        # Price range filter
         if min_price is not None:
             query = query.where(Course.price >= min_price)
         if max_price is not None:
             query = query.where(Course.price <= max_price)
 
-        # 4) Ranges for ratings
+        # Completion time filter - now using Avg_Completion_TIme field directly
+        if completion_time:
+            time_ranges = {
+                "less_than_5": (0, 5),
+                "5_10": (5, 10),
+                "11_15": (11, 15),
+                "16_22": (16, 22)
+            }
+            if completion_time in time_ranges:
+                min_time, max_time = time_ranges[completion_time]
+                query = query.where(Course.Avg_Completion_TIme >= min_time)
+                query = query.where(Course.Avg_Completion_TIme <= max_time)
+
+        # Rating filters
         if min_ratings is not None:
             query = query.where(Course.ratings >= min_ratings)
         if max_ratings is not None:
             query = query.where(Course.ratings <= max_ratings)
 
-        print("Query" , query)
         results = session.exec(query)
         return results.all()
