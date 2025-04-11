@@ -27,6 +27,10 @@ class Course(SQLModel, table=True):
     ratings: Optional[float] = Field(default=0.0)
     price: Optional[float] = Field(default=0.0)
     mentor_id: Optional[int] = Field(default=None, foreign_key="cou_user.user.id")
+    IT: Optional[bool] = Field(default=False, sa_column_kwargs={"name": "IT"})
+    Coding_Required: Optional[bool] = Field(default=False, sa_column_kwargs={"name": "Coding_Required"})
+    Avg_Completion_TIme: Optional[int] = Field(default=None, sa_column_kwargs={"name": "Avg_Completion_TIme"})
+    Course_level: Optional[str] = Field(default=None, sa_column_kwargs={"name": "Course_level"})  # "beginner", "intermediate", "advanced"
     instructor: Optional["User"] = Relationship(
         back_populates="courses",
         sa_relationship_kwargs={"lazy": "joined"}
