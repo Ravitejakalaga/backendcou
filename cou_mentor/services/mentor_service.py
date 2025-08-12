@@ -2,6 +2,7 @@ from typing import List, Optional,  Union,Dict
 from sqlmodel import Session
 from fastapi import HTTPException
 from cou_mentor.repositories.mentor_repository import MentorRepository
+
 from cou_mentor.models.mentor import Mentor
 from sqlalchemy import text
 
@@ -72,24 +73,44 @@ class MentorService:
     @staticmethod
     def get_filtered_mentors(
         session: Session,
-        category_id: Optional[int] = None,
-        region: Optional[str] = None,
-        gender: Optional[str] = None,
-       
-        country_id: Optional[int] = None,
-        language_id: Optional[int] = None,
-        skill_id: Optional[int] = None,
-        hourly_rate: Optional[float] = None,
-        availability_day: Optional[str] = None,
-    ) -> List[Dict]:
+        subcategory_name: Optional[str] = None,
+        country_name: Optional[str] = None,
+        language_name: Optional[str] = None,
+        overall_experience: Optional[int] = None,
+        offering_mentorship_for: Optional[str] = None,
+        companies: Optional[str] = None,
+        avg_students_rating: Optional[float] = None,
+        open_for_inquires: Optional[bool] = None,
+    ) -> List[dict]:
         return MentorRepository.get_filtered_mentors(
             session=session,
-            category_id=category_id,
-            region=region,
-            gender=gender,
-             country_id=country_id,
-            language_id=language_id,
-            skill_id=skill_id,
-            hourly_rate=hourly_rate,
-            availability_day=availability_day,
+            subcategory_name=subcategory_name,
+            country_name=country_name,
+            language_name=language_name,
+            overall_experience=overall_experience,
+            offering_mentorship_for=offering_mentorship_for,
+            companies=companies,
+            avg_students_rating=avg_students_rating,
+            open_for_inquires=open_for_inquires,
         )
+
+    @staticmethod
+    def get_mentor_profile_summary(user_id: int, session: Session):
+        data = MentorRepository.fetch_mentor_profile_summary(user_id, session)
+        if not data:
+            raise HTTPException(status_code=404, detail="Mentor not found")
+        return data
+    @staticmethod
+    def search_mentors(
+        session: Session,
+        name: Optional[str] = None,
+        domain: Optional[str] = None,
+        skill: Optional[str] = None,
+    ) -> List[dict]:
+        return MentorRepository.search_mentors(
+            session=session,
+            name=name,
+            domain=domain,
+            skill=skill,
+        )
+        

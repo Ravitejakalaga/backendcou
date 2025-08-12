@@ -2,13 +2,90 @@ from sqlmodel import Session, select
 from fastapi import HTTPException
 from typing import List, Optional, Dict
 from cou_mentor.models.mentor import Mentor
+
 from sqlalchemy import text
 import base64
+import json
 
 from sqlmodel import Session
 from sqlalchemy.sql import text
+import mimetypes
+
+
+
+
 
 class MentorRepository:
+ 
+    @staticmethod
+    def fetch_mentor_profile_summary(user_id: int, session: Session):
+        query = text("""
+            SELECT 
+                u.display_name,
+                u.image,
+                u.languages_known,
+                m.bio,
+                m.avg_students_rating,
+                m.offering_mentorship_for,
+                m.designation,
+                m.overall_experience,
+                us.current_skills,
+                sr.comment,
+                cs.name AS subcategory
+            FROM cou_user."user" u
+            JOIN cou_mentor.mentor m ON m.user_id = u.id
+            LEFT JOIN cou_user.user_skills us ON us.user_id = u.id
+            LEFT JOIN LATERAL (
+                SELECT comment
+                FROM cou_mentor.mentor_student_reviews
+                WHERE mentor_id = m.id
+                ORDER BY created_at DESC
+                LIMIT 1
+            ) sr ON true
+            LEFT JOIN cou_course.course_subcategory cs ON cs.id = (m.additional_details->>'subcategory_id')::int
+            WHERE u.id = :user_id
+            LIMIT 1
+        """)
+
+        result = session.execute(query, {"user_id": user_id}).mappings().first()
+        if not result:
+            return None
+
+        image_data = result["image"]
+        image_url = None
+
+        if image_data:
+            img_bytes = image_data.tobytes() if hasattr(image_data, "tobytes") else bytes(image_data)
+            mime_type = "application/octet-stream"
+
+            if img_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+                mime_type = "image/png"
+            elif img_bytes.startswith(b"\xff\xd8\xff"):
+                mime_type = "image/jpeg"
+            elif img_bytes.startswith(b"GIF87a") or img_bytes.startswith(b"GIF89a"):
+                mime_type = "image/gif"
+            elif img_bytes.startswith(b"RIFF") and img_bytes[8:12] == b"WEBP":
+                mime_type = "image/webp"
+
+            base64_image = base64.b64encode(img_bytes).decode("utf-8")
+            image_url = f"data:{mime_type};base64,{base64_image}"
+
+        return {
+            "display_name": result["display_name"],
+            "image": image_url,
+            "languages_known": result["languages_known"],
+            "bio": result["bio"],
+            "avg_students_rating": result["avg_students_rating"],
+            "offering_mentorship_for": result["offering_mentorship_for"],
+            "designation": result["designation"],
+            "overall_experience": result["overall_experience"],
+            "current_skills": result["current_skills"],
+            "comment": result["comment"],
+            "subcategory": result["subcategory"]
+        }
+        
+    
+   
     @staticmethod
     def get_mentor_by_id(session: Session, mentor_id: int) -> Optional[Mentor]:
         """
@@ -108,177 +185,228 @@ class MentorRepository:
         """
         return session.exec(select(Mentor)).all()
 
+    
+    
+    
+ 
+
+
+
     @staticmethod
     def get_filtered_mentors(
         session: Session,
-        category_id: Optional[int] = None,
-        region: Optional[str] = None,
-        gender: Optional[str] = None,
-        # Removed mentor_name parameter
-        country_id: Optional[int] = None,
-        language_id: Optional[int] = None,
-        skill_id: Optional[int] = None,
-        hourly_rate: Optional[float] = None,
-        availability_day: Optional[str] = None,
-    ) -> List[Dict]:
-        query = """
-            SELECT DISTINCT 
-                u.display_name,
-                u.image, 
-                m.bio, 
-                m.overall_experience, 
-                m.availability_schedule, 
-                m.additional_details, 
-                m.avg_students_rating, 
-                m.hourly_rate
-            FROM 
-                cou_user."user" u
-            JOIN 
-                cou_mentor.mentor m ON u.id = m.user_id
-            LEFT JOIN 
-                cou_course.course cr ON cr.mentor_id = m.user_id
-            LEFT JOIN 
-                cou_course.course_category cc ON cr.category_id = cc.id
-            LEFT JOIN 
-                cou_admin.country c ON u.country_id = c.id
-            LEFT JOIN 
-                cou_admin.language l ON cr.language_id = l.id
-            LEFT JOIN 
-                cou_user.user_skills us ON u.id = us.user_id
-            LEFT JOIN 
-                cou_user.skill s ON us.skill_id = s.id
-            WHERE 
-                u.active = true 
-                AND m.active = true
+        subcategory_name: Optional[str] = None,
+        country_name: Optional[str] = None,
+        language_name: Optional[str] = None,
+        overall_experience: Optional[int] = None,
+        offering_mentorship_for: Optional[str] = None,
+        companies: Optional[str] = None,
+        avg_students_rating: Optional[float] = None,
+        open_for_inquires: Optional[bool] = None,
+        match_any: bool = False
+    ) -> List[dict]:
+        base_filters = ["u.active = true", "m.active = true"]
+        dynamic_filters = []
+        params = {}
+
+        if subcategory_name:
+            dynamic_filters.append("cs.name ILIKE :subcategory_name")
+            params["subcategory_name"] = f"%{subcategory_name}%"
+        if country_name:
+            dynamic_filters.append("coun.name ILIKE :country_name")
+            params["country_name"] = f"%{country_name}%"
+        if language_name:
+            dynamic_filters.append("lang.name ILIKE :language_name")
+            params["language_name"] = f"%{language_name}%"
+        if overall_experience is not None:
+            dynamic_filters.append("m.overall_experience >= :overall_experience")
+            params["overall_experience"] = overall_experience
+        if offering_mentorship_for:
+            dynamic_filters.append("m.offering_mentorship_for ILIKE :offering_mentorship_for")
+            params["offering_mentorship_for"] = f"%{offering_mentorship_for}%"
+        if companies:
+            dynamic_filters.append("m.companies ILIKE :companies")
+            params["companies"] = f"%{companies}%"
+        if avg_students_rating is not None:
+            dynamic_filters.append("m.avg_students_rating >= :avg_students_rating")
+            params["avg_students_rating"] = avg_students_rating
+        if open_for_inquires is not None:
+            dynamic_filters.append("m.open_for_inquires = :open_for_inquires")
+            params["open_for_inquires"] = open_for_inquires
+
+        where_clause = (
+            " AND ".join(base_filters) + " AND (" + " OR ".join(dynamic_filters) + ")"
+            if match_any and dynamic_filters
+            else " AND ".join(base_filters + dynamic_filters)
+        )
+
+        query = f"""
+        SELECT 
+            u.display_name,
+            u.image,
+            m.designation,
+            m.avg_students_rating,
+            m.bio,
+            m.overall_experience,
+            lang.name AS language,
+            m.offering_mentorship_for,
+            m.open_for_inquires,
+            us.current_skills,
+            cs.name AS course_subcategory,
+            ARRAY_AGG(DISTINCT msr.comment) FILTER (WHERE msr.comment IS NOT NULL) AS comments
+        FROM cou_user."user" u
+        JOIN cou_mentor.mentor m ON m.user_id = u.id
+        LEFT JOIN cou_user.user_skills us ON us.user_id = u.id AND us.active = true
+        LEFT JOIN cou_admin.country coun ON coun.id = u.country_id
+        LEFT JOIN cou_admin.language lang ON lang.country_id = u.country_id
+        LEFT JOIN cou_course.course c ON c.mentor_id = u.id AND c.active = true
+        LEFT JOIN cou_course.course_subcategory cs ON cs.id = c.subcategory_id
+        LEFT JOIN cou_mentor.mentor_student_reviews msr ON msr.mentor_id = m.id
+        WHERE {where_clause}
+        GROUP BY u.id, m.id, lang.name, us.current_skills, cs.name
         """
 
-        # Apply dynamic filters
-        if category_id:
-            query += " AND cc.id = :category_id"
-        if region:
-            query += " AND u.region = :region"
-        if gender:
-            query += " AND u.gender = :gender"
-        # Removed mentor_name condition
-        if country_id:
-            query += " AND c.id = :country_id"
-        if language_id:
-            query += " AND l.id = :language_id"
-        if skill_id:
-            query += " AND us.skill_id = :skill_id"
-        if hourly_rate:
-            query += " AND m.hourly_rate = :hourly_rate"
-        if availability_day:
-            query += " AND m.availability_schedule::jsonb ->> :availability_day IS NOT NULL"
-
-        result = session.execute(
-            text(query), 
-            {
-                "category_id": category_id,
-                "region": region,
-                "gender": gender,
-                # Removed mentor_name from parameters
-                "country_id": country_id,
-                "language_id": language_id,
-                "skill_id": skill_id,
-                "hourly_rate": hourly_rate,
-                "availability_day": availability_day
-            }
-        ).mappings().all()
-
-        # Convert image (BYTEA) to Base64
-        mentors = []
-        for row in result:
-            mentor = dict(row)
-            if mentor.get("image"):
-                # Convert bytea (memoryview) to Base64 string
-                mentor["image"] = base64.b64encode(mentor["image"]).decode("utf-8")
-                mentor["image"] = f"data:image/png;base64,{mentor['image']}"
-            mentors.append(mentor)
-
-        return mentors
-   
-    @staticmethod
-    def get_filtered_mentors_by_names(
-        session: Session,
-        category: Optional[str] = None,
-        country: Optional[str] = None,
-        language: Optional[str] = None,
-        skill: Optional[str] = None,
-        gender: Optional[str] = None,
-        region: Optional[str] = None,
-        budget: Optional[float] = None,
-        availability_day: Optional[str] = None,
-        mentor: Optional[str] = None
-    ) -> List[Dict]:
-        query = '''
-        SELECT 
-            u.display_name AS mentor_name,
-            u.image AS mentor_image,
-            m.bio,
-            m.additional_details,
-            m.overall_experience,
-            m.avg_students_rating AS rating,
-            m.hourly_rate AS budget,
-            m.availability_schedule
-        FROM 
-            cou_user."user" u
-        JOIN 
-            cou_mentor.mentor m ON u.id = m.user_id
-        LEFT JOIN 
-            cou_course.course c ON c.mentor_id = m.user_id
-        LEFT JOIN 
-            cou_course.course_category cc ON c.category_id = cc.id
-        LEFT JOIN 
-            cou_admin.country cn ON u.country_id = cn.id
-        LEFT JOIN 
-            cou_admin.language l ON c.language_id = l.id
-        LEFT JOIN 
-            cou_user.user_skills us ON us.user_id = u.id
-        LEFT JOIN 
-            cou_user.skill s ON us.skill_id = s.id
-        WHERE 
-            u.active = true 
-            AND m.active = true
-            AND (:category IS NULL OR cc.name ILIKE '%' || :category || '%')
-            AND (:country IS NULL OR cn.name ILIKE '%' || :country || '%')
-            AND (:language IS NULL OR l.name ILIKE '%' || :language || '%')
-            AND (:skill IS NULL OR s.skill_name ILIKE '%' || :skill || '%')
-            AND (:gender IS NULL OR u.gender ILIKE '%' || :gender || '%')
-            AND (:region IS NULL OR u.region ILIKE '%' || :region || '%')
-            AND (:budget IS NULL OR m.hourly_rate <= :budget)
-            AND (:availability_day IS NULL OR m.availability_schedule::text ILIKE '%' || :availability_day || '%')
-            AND (:mentor IS NULL OR u.display_name ILIKE '%' || :mentor || '%')
-        ORDER BY 
-            u.display_name ASC;
-        '''
-
-        result = session.execute(
-            text(query), {
-                "category": category,
-                "country": country,
-                "language": language,
-                "skill": skill,
-                "gender": gender,
-                "region": region,
-                "budget": budget,
-                "availability_day": availability_day,
-                "mentor": mentor
-            }
-        ).mappings().all()
+        result = session.exec(text(query).params(**params))
+        rows = result.mappings().all()
 
         mentors = []
-        for row in result:
+        for row in rows:
             mentor = dict(row)
-            image_bytes = mentor.get("mentor_image")
-            if image_bytes:
-                try:
-                    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
-                    mentor["mentor_image"] = f"data:image/png;base64,{encoded_image}"
-                except Exception:
-                    mentor["mentor_image"] = None
+
+            # Image handling
+            image_data = mentor.get("image")
+            if image_data:
+                img_bytes = image_data.tobytes() if hasattr(image_data, "tobytes") else bytes(image_data)
+                mime_type = "application/octet-stream"
+                if img_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+                    mime_type = "image/png"
+                elif img_bytes.startswith(b"\xff\xd8\xff"):
+                    mime_type = "image/jpeg"
+                elif img_bytes.startswith(b"GIF87a") or img_bytes.startswith(b"GIF89a"):
+                    mime_type = "image/gif"
+                elif img_bytes.startswith(b"RIFF") and img_bytes[8:12] == b"WEBP":
+                    mime_type = "image/webp"
+
+                base64_image = base64.b64encode(img_bytes).decode("utf-8")
+                mentor["image"] = f"data:{mime_type};base64,{base64_image}"
             else:
-                mentor["mentor_image"] = None
+                mentor["image"] = None
+
+            # Null safety
+            mentor["comments"] = mentor.get("comments", []) or []
+            mentor["current_skills"] = (
+                mentor.get("current_skills", {}).get("skills", [])
+                if isinstance(mentor.get("current_skills"), dict)
+                else mentor.get("current_skills", [])
+            )
+
             mentors.append(mentor)
 
         return mentors
+    
+ 
+  
+    #
+    # repositories/mentor_repository.py
+
+
+
+
+    @staticmethod
+    def search_mentors(
+        session: Session,
+        name: Optional[str] = None,
+        domain: Optional[str] = None,
+        skill: Optional[dict] = None
+    ) -> List[dict]:
+
+        base_filters = ["u.active = true", "m.active = true"]
+        dynamic_filters = []
+        params = {}
+
+        if name:
+            dynamic_filters.append("u.display_name ILIKE :name")
+            params["name"] = f"%{name}%"
+        if domain:
+            dynamic_filters.append("cs.name ILIKE :domain")
+            params["domain"] = f"%{domain}%"
+        if skill:
+            dynamic_filters.append("""
+                (
+                    (jsonb_typeof(us.current_skills) = 'array' AND EXISTS (
+                        SELECT 1 FROM jsonb_array_elements(us.current_skills) AS elem
+                        WHERE elem->>'description' ILIKE :skill
+                    ))
+                    OR
+                    (jsonb_typeof(us.current_skills) = 'object' AND EXISTS (
+                        SELECT 1 FROM jsonb_array_elements(us.current_skills->'skills') AS elem
+                        WHERE elem->>'description' ILIKE :skill
+                    ))
+                )
+            """)
+            params["skill"] = f"%{skill}%"
+
+        where_clause = " AND ".join(base_filters + dynamic_filters)
+
+        query = f"""
+        SELECT 
+            u.display_name AS name,
+            u.image,
+            m.designation,
+            m.avg_students_rating,
+            m.bio,
+            m.overall_experience,
+            us.current_skills AS skill,
+            cs.name AS domain,
+            lang.name AS language,
+            ARRAY_AGG(DISTINCT msr.comment) FILTER (WHERE msr.comment IS NOT NULL) AS comments
+        FROM cou_user."user" u
+        JOIN cou_mentor.mentor m ON m.user_id = u.id
+        LEFT JOIN cou_user.user_skills us ON us.user_id = u.id AND us.active = true
+        LEFT JOIN cou_course.course c ON c.mentor_id = u.id AND c.active = true
+        LEFT JOIN cou_course.course_subcategory cs ON cs.id = c.subcategory_id
+        LEFT JOIN cou_mentor.mentor_student_reviews msr ON msr.mentor_id = m.id
+        LEFT JOIN cou_admin.language lang ON lang.country_id = u.country_id
+        WHERE {where_clause}
+        GROUP BY u.id, m.id, us.current_skills, cs.name, lang.name
+        """
+
+        result = session.exec(text(query).params(**params))
+        rows = result.mappings().all()
+
+        mentors = []
+        for row in rows:
+            mentor = dict(row)
+
+            # Convert image
+            image_data = mentor.get("image")
+            if image_data:
+                img_bytes = image_data.tobytes() if hasattr(image_data, "tobytes") else bytes(image_data)
+                mime_type = "application/octet-stream"
+                if img_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+                    mime_type = "image/png"
+                elif img_bytes.startswith(b"\xff\xd8\xff"):
+                    mime_type = "image/jpeg"
+                elif img_bytes.startswith(b"GIF87a") or img_bytes.startswith(b"GIF89a"):
+                    mime_type = "image/gif"
+                elif img_bytes.startswith(b"RIFF") and img_bytes[8:12] == b"WEBP":
+                    mime_type = "image/webp"
+                base64_image = base64.b64encode(img_bytes).decode("utf-8")
+                mentor["image"] = f"data:{mime_type};base64,{base64_image}"
+            else:
+                mentor["image"] = None
+
+            # Parse skill JSON
+            try:
+                mentor["skill"] = json.loads(mentor["skill"]) if mentor.get("skill") else {}
+            except Exception:
+                mentor["skill"] = {}
+
+            mentor["comments"] = mentor.get("comments", []) or []
+            mentors.append(mentor)
+
+        return mentors
+
+
+
+

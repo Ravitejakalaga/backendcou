@@ -19,7 +19,7 @@ from auth_bl import auth_router
 import logging
 from cou_mentor.api.mentor_routes import router as mentor_router
 from fastapi import FastAPI
-
+from cou_mentor.api.mentorship_plan import router as mentorship_plans_router
 
 from cou_user.api.userCourse_routes import router as usercourse_router
 #from cou_admin.api.state_routes import router as state_router
@@ -119,6 +119,7 @@ app.include_router(skill_router, prefix="/api/v1")
 app.include_router(user_router, prefix="/api/v1")
 app.include_router(usercourse_router, prefix="/api/v1")
 app.include_router(student_router, prefix="/api/v1")
+app.include_router(mentorship_plans_router, prefix="/api/v1")
 
 
 

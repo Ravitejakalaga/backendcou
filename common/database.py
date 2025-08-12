@@ -5,6 +5,9 @@ from cou_admin.models.country import Country
 from cou_user.models.user import User
 from cou_user.models.role import Role
 from cou_user.models.logintype import LoginType
+from cou_mentor.models.institute import Institute
+from cou_mentor.models.mentor import Mentor
+from cou_mentor.models.mentorship_plan import MentorshipPlan
 
 # Create engine with explicit schema creation
 engine = create_engine(
