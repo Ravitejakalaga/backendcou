@@ -114,3 +114,17 @@ class MentorService:
             skill=skill,
         )
         
+    # NEW METHOD FOR MENTOR AVAILABILITY
+    @staticmethod
+    def get_mentor_availability(session: Session, mentor_id: int) -> Dict:
+        """
+        Retrieve only the availability schedule for a given mentor.
+        """
+        mentor = MentorRepository.get_mentor_by_id(session, mentor_id)
+        if not mentor:
+            raise HTTPException(status_code=404, detail="Mentor not found")
+        
+        return {
+            "mentor_id": mentor.id,
+            "availability_schedule": mentor.availability_schedule
+        }

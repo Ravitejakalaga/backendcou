@@ -406,6 +406,34 @@ class MentorRepository:
             mentors.append(mentor)
 
         return mentors
+       # ✅ NEW METHOD: Get availability schedule for a specific mentor
+
+    @staticmethod
+
+    def get_mentor_availability(session: Session, mentor_id: int) -> Optional[Dict]:
+
+        """
+
+        Retrieve a mentor's availability schedule by mentor ID.
+
+        """
+
+        mentor = session.get(Mentor, mentor_id)
+
+        if not mentor:
+
+            return None
+
+        return {
+
+            "mentor_id": mentor.id,
+
+            "availability_schedule": mentor.availability_schedule
+
+        }
+
+ 
+
 
 
 

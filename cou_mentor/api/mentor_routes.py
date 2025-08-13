@@ -12,10 +12,11 @@ from common.database import get_session
 from sqlalchemy import text
 from crewai import Task, Crew
 from cou_mentor.utils.skill_matcher import (
-    get_student_skills, get_user_mentor_skills, combine_skills, calculate_skill_match
+    get_student_skills, get_user_mentor_skills, combine_skills, calculate_skill_match,
+    extract_keywords, get_matching_subcategories, get_mentors_by_subcategory_ids
 )
 from cou_mentor.utils.crew_agent import mentor_profile_agent
-from cou_mentor.schemas.request_schema import StudentRequest
+from cou_mentor.schemas.request_schema import StudentRequest,userContext
 from cou_user.schemas.user_schema import UserRead
 import base64
 
@@ -223,6 +224,56 @@ def search_mentors(
         skill=skill,
     )
     
+@router.post("/top-mentor/user-challenge", summary="Match mentor based on user challenge")
+def match_mentor(request: userContext, session: Session = Depends(get_session)):
+    if not request.challenges:
+        raise HTTPException(status_code=400, detail="Challenge input is required.")
 
+    challenge_keywords = extract_keywords(request.challenges)
+    matched_subcategory_ids = get_matching_subcategories(challenge_keywords, session)
+    mentors = get_mentors_by_subcategory_ids(matched_subcategory_ids, session)
+
+    if not mentors:
+        raise HTTPException(status_code=404, detail="No mentors found for the given challenge.")
+
+    filtered_mentors = [
+        m for m in mentors if m.avg_students_rating >= 3 and m.id != request.user_id
+    ]
+
+    profiles_text = "\n\n".join(
+        f"""Name: {m.name}\nBio: {m.bio or 'N/A'}\nDesignation: {m.designation or 'N/A'}"""
+        for m in filtered_mentors
+    )
+
+    task = Task(
+        description=(
+            f"Student has the following challenge: \"{request.challenges}\".\n\n"
+            f"The following mentor profiles are available:\n\n{profiles_text}\n\n"
+            f"Select the top 1 or 2 mentors and explain why they are the best match based on their bios and designations."
+        ),
+        expected_output="Name(s) of selected mentor(s) with justification.",
+        agent=mentor_profile_agent
+    )
+
+    crew = Crew(agents=[mentor_profile_agent], tasks=[task], verbose=False)
+    result = crew.kickoff()
+
+    return {
+        "summary": result,
+        "top_matches": [m.dict() for m in filtered_mentors]
+    }
+@router.get("/mentor-availability/{mentor_id}", summary="Get mentor's availability schedule")
+def get_mentor_availability(mentor_id: int, session: Session = Depends(get_session)):
+    mentor = MentorRepository.get_mentor_by_id(session, mentor_id)
+    if not mentor:
+        raise HTTPException(status_code=404, detail="Mentor not found")
+
+    if not mentor.availability_schedule:
+        raise HTTPException(status_code=404, detail="Availability schedule not found for this mentor")
+
+    return {
+        "mentor_id": mentor.id,
+        "availability_schedule": mentor.availability_schedule
+    }
 
     

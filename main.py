@@ -22,6 +22,7 @@ from fastapi import FastAPI
 from cou_mentor.api.mentorship_plan import router as mentorship_plans_router
 
 from cou_user.api.userCourse_routes import router as usercourse_router
+from cou_mentor.api.mentor_consultation import router as mentor_consultation_router
 #from cou_admin.api.state_routes import router as state_router
 
 # Configure logging
@@ -120,7 +121,7 @@ app.include_router(user_router, prefix="/api/v1")
 app.include_router(usercourse_router, prefix="/api/v1")
 app.include_router(student_router, prefix="/api/v1")
 app.include_router(mentorship_plans_router, prefix="/api/v1")
-
+app.include_router(mentor_consultation_router, prefix="/api/v1")
 
 
 
