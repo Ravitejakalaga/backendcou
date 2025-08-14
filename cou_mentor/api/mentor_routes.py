@@ -87,7 +87,111 @@ def match_mentor(request: StudentRequest, session: Session = Depends(get_session
         ]
     }
 
+@router.get("/{mentor_id}", summary="Get mentor by ID")
+def get_mentor_by_mentorid(mentor_id: int, session: Session = Depends(get_session)):
+    """
+    Retrieve a mentor and related details by their ID, including skills and experiences.
+    """
+    sql = text("""
+        
+    SELECT 
+        u.display_name,
+        u.image, 
+        u.id,
+        m.bio, 
+        m.expertise,
+        m.overall_experience, 
+        m.availability_schedule, 
+        m.additional_details, 
+        m.avg_students_rating, 
+        m.hourly_rate,
+        u.languages_known,
+        m.cloudou_rating,
+        m.mentor_about,
+        u.region,
 
+        -- Aggregate all current skills into an array
+        array_agg(DISTINCT us.current_skills) AS skills,
+
+        -- Aggregate user experience as JSON objects
+        json_agg(DISTINCT jsonb_build_object(
+            'company_name', usrexp.company_name,
+            'start_date', usrexp.start_date,
+            'end_date', usrexp.end_date,
+            'job_role_name', jobrole.job_role_name
+        )) AS experiences,
+
+        -- Aggregate institutions from user_education
+        array_agg(DISTINCT ued.institution_name) AS institutions,
+
+        -- Aggregate reviews with student info
+        json_agg(DISTINCT jsonb_build_object(
+            'student_id', msr.student_id,
+            'rating', msr.rating,
+            'comments', msr.comment,
+            'student_display_name', stu.display_name,
+            'student_image', stu.image
+        )) AS reviews
+
+    FROM 
+        cou_user."user" AS u
+    JOIN 
+        cou_mentor.mentor AS m ON u.id = m.user_id
+    LEFT JOIN 
+        cou_user.user_skills AS us ON u.id = us.user_id
+    LEFT JOIN 
+        cou_user.user_experience AS usrexp ON u.id = usrexp.user_id
+    LEFT JOIN 
+        cou_user.job_role AS jobrole ON jobrole.id = usrexp.job_role_id
+    LEFT JOIN 
+        cou_user.user_education AS ued ON u.id = ued.user_id
+    LEFT JOIN 
+        cou_mentor.mentor_student_reviews AS msr ON u.id = msr.mentor_id
+    LEFT JOIN 
+        cou_user."user" AS stu ON msr.student_id = stu.id  -- join again for student info
+
+    WHERE 
+        u.active = true 
+        AND m.active = true 
+        AND u.id = :mentor_id
+
+    GROUP BY 
+        u.id, u.display_name, u.image, 
+        m.bio, m.expertise, m.overall_experience, 
+        m.availability_schedule, m.additional_details, 
+        m.avg_students_rating, m.hourly_rate, 
+        u.languages_known, m.cloudou_rating, 
+        m.mentor_about, u.region;
+
+    """)
+    print(sql)
+    result = session.execute(sql, {"mentor_id": mentor_id}).mappings().first()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Mentor not found")
+
+    mentor = dict(result)
+
+    # Process image
+    image_bytes = mentor.get("image")
+    if image_bytes:
+        image_bytes = bytes(image_bytes)
+        mime_type = MentorRepository.detect_mime_type(image_bytes)
+        encoded = base64.b64encode(image_bytes).decode("utf-8")
+        mentor["image"] = f"data:image/{mime_type};base64,{encoded}"
+    else:
+        mentor["image"] = None  # or default image URL if needed
+    
+    studimage_bytes = mentor.get("student_image")
+    if studimage_bytes:
+        studimage_bytes = bytes(studimage_bytes)
+        mime_type = MentorRepository.detect_mime_type(studimage_bytes)
+        encoded = base64.b64encode(studimage_bytes).decode("utf-8")
+        mentor["student_image"] = f"data:image/{mime_type};base64,{encoded}"
+    else:
+        mentor["student_image"] = None  # or default image URL if needed
+
+    return mentor
 
 
 
@@ -98,12 +202,6 @@ def get_all_mentors(session: Session = Depends(get_session)):
 
 
 # ✅ Get Mentor by ID
-@router.get("/{mentor_id}", response_model=MentorRead, summary="Get mentor by ID")
-def get_mentor(mentor_id: int, session: Session = Depends(get_session)):
-    mentor = MentorRepository.get_mentor_by_id(session, mentor_id)
-    if not mentor:
-        raise HTTPException(status_code=404, detail="Mentor not found")
-    return mentor
 
 
 # ✅ Create Mentor
