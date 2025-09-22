@@ -1,8 +1,16 @@
-import uvicorn
-from fastapi import FastAPI
+# main.py
 from contextlib import asynccontextmanager
+import logging
+from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
+
 from common.database import engine, create_db_and_tables
+from auth_bl import auth_router
+from auth_bl.routes.magicAuth import router as magic_auth_router
+
+# Routers
 from cou_admin.api.country_routes import router as country_router
 from cou_admin.api.currency_routes import router as currency_router
 from cou_user.api.user_routes import router as user_router
@@ -13,27 +21,19 @@ from cou_student.api.student_routes import router as student_router
 from cou_user.api.job_role_routes import router as job_role_router
 from cou_user.api.skill_routes import router as skill_router
 from cou_onboarding import onboarding_progress_router
-from fastapi.responses import RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-from auth_bl import auth_router
-import logging
 from cou_mentor.api.mentor_routes import router as mentor_router
-from fastapi import FastAPI
 from cou_mentor.api.mentorship_plan import router as mentorship_plans_router
-
 from cou_user.api.userCourse_routes import router as usercourse_router
 from cou_mentor.api.mentor_consultation import router as mentor_consultation_router
-#from cou_admin.api.state_routes import router as state_router
 
-# Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Actions to run at startup
+    # Import models to register metadata
     from cou_admin.models.country import Country
     from cou_user.models.user import User
     from cou_user.models.role import Role
@@ -43,70 +43,59 @@ async def lifespan(app: FastAPI):
     from cou_user.models.skill import Skill
     from cou_course.models.coursesubcategory import CourseSubcategory
     from cou_onboarding.models.onboarding_progress import OnboardingProgress
-    
     SQLModel.metadata.create_all(engine)
-    
-    yield  # Allows FastAPI to proceed after startup
-    # Add any shutdown actions here if needed
+    yield
 
-
-
-# Create FastAPI app with the lifespan context
 app = FastAPI(
     lifespan=lifespan,
     debug=True,
     title="Your API",
     description="Your API Description",
     version="1.0.0",
-    # Remove the /api/v1 prefix from OpenAPI URLs to keep them at root level
     openapi_url="/openapi.json",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
-# Create database tables on startupS
 @app.on_event("startup")
 async def on_startup():
     create_db_and_tables()
 
-# Root endpoint - redirect to docs
 @app.get("/")
 async def root():
     return RedirectResponse(url="/docs")
 
-# Add health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "Application is healthy"}
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost",
+        "http://localhost:*",
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:3002",
         "http://localhost:3003",
         "http://localhost:3004",
-        "http://localhost",
-        "http://localhost:*",
-        "https://cou-ip-bkend-dev.vercel.app", 
         "https://*.vercel.app",
+        "https://cou-ip-bkend-dev.vercel.app",
         "https://backendcou-r4846xwah-projectcou.vercel.app",
         "https://dev.CloudOU.vercel.com",
         "https://frontend-ovltx2las-projectcou.vercel.app",
         "https://frontend-cou.vercel.app",
         "https://dev-cloudou-gtbnajf0f6cvd2ar.centralindia-01.azurewebsites.net",
-        "http://dev-cloudou-gtbnajf0f6cvd2ar.centralindia-01.azurewebsites.net"
+        "http://dev-cloudou-gtbnajf0f6cvd2ar.centralindia-01.azurewebsites.net",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],  # Allow frontend to read custom headers
-    max_age=3600,  # Cache preflight requests for 1 hour
+    expose_headers=["*"],
+    max_age=3600,
 )
 
-# Include routers with explicit prefixes
+# Register routers
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(country_router, prefix="/api/v1")
 app.include_router(currency_router, prefix="/api/v1")
@@ -122,13 +111,13 @@ app.include_router(usercourse_router, prefix="/api/v1")
 app.include_router(student_router, prefix="/api/v1")
 app.include_router(mentorship_plans_router, prefix="/api/v1")
 app.include_router(mentor_consultation_router, prefix="/api/v1")
-
-
-
+app.include_router(magic_auth_router, prefix="/api/v1/magic-auth")
 # Debug print routes
 print("\nRegistered routes:")
-[print(f"{route.path} [{', '.join(route.methods)}]") for route in app.routes]
+for route in app.routes:
+    print(f"{route.path} [{', '.join(route.methods)}]")
 
-# Debug: Print all routes
 if __name__ == "__main__":
+    # Import uvicorn ONLY for local dev
+    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
