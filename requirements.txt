@@ -14,3 +14,5 @@ python-dotenv
 httpx
 bcrypt
 requests
+email-validator
+crewai
