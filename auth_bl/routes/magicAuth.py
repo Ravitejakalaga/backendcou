@@ -17,6 +17,8 @@ FRONTEND_BASE = os.getenv("FRONTEND_BASE", "https://frontendcou-smoky.vercel.app
 # Public URL of your FastAPI service
 BASE_URL = os.getenv("BASE_URL", "https://backendcou-3.onrender.com")
 ROUTER_PREFIX = os.getenv("ROUTER_PREFIX", "/api/v1/magic-auth")
+# Default verified page path on the frontend (configurable)
+MAGIC_VERIFIED_PATH = os.getenv("MAGIC_VERIFIED_PATH", "auth/verified")
 
 @router.get("/")
 def health():
@@ -50,14 +52,17 @@ def request_magic_link(
         logger.error(f"Failed to create token: {e}")
         raise HTTPException(status_code=500, detail="Failed to create magic token")
 
+    # Ensure we have a default next URL that is mobile-friendly (frontend verified page)
+    if not next_url:
+        frontend_base = FRONTEND_BASE if FRONTEND_BASE.endswith("/") else f"{FRONTEND_BASE}/"
+        next_url = f"{frontend_base}{MAGIC_VERIFIED_PATH}"
+
     # Build the verification URL with proper parameters
     verify_params = {
         "token": token,
-        "redirect": "true",  # Always set redirect to true when next_url is provided
+        "redirect": "true",  # Always redirect to next_url for better mobile UX
+        "next": next_url,
     }
-    
-    if next_url:
-        verify_params["next"] = next_url
 
     # Properly encode the query parameters
     query_string = urlencode(verify_params, safe=':/?&=')
@@ -93,12 +98,16 @@ def verify_magic_link(
         logger.error(f"Token verification failed: {e}")
         raise HTTPException(status_code=400, detail="Invalid or expired magic link")
 
-    # If redirect is requested and next URL is provided
-    if redirect and next:
+    # If redirect is requested, redirect to provided next or default verified page
+    if redirect:
         try:
+            redirect_target = next
+            if not redirect_target:
+                frontend_base = FRONTEND_BASE if FRONTEND_BASE.endswith("/") else f"{FRONTEND_BASE}/"
+                redirect_target = f"{frontend_base}{MAGIC_VERIFIED_PATH}"
             # Construct redirect URL with email parameter
-            separator = "&" if "?" in next else "?"
-            redirect_url = f"{next}{separator}email={quote(email)}&verified=true"
+            separator = "&" if "?" in redirect_target else "?"
+            redirect_url = f"{redirect_target}{separator}email={quote(email)}&verified=true"
             logger.info(f"Redirecting to: {redirect_url}")
             return RedirectResponse(url=redirect_url, status_code=302)
         except Exception as e:
