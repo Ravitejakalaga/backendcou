@@ -13,9 +13,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-FRONTEND_BASE = os.getenv("FRONTEND_BASE", "http://192.168.1.23:3000")
+FRONTEND_BASE = os.getenv("FRONTEND_BASE", "https://frontendcou-smoky.vercel.app/")
 # Public URL of your FastAPI service
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BASE_URL", "https://backendcou-3.onrender.com")
 ROUTER_PREFIX = os.getenv("ROUTER_PREFIX", "/api/v1/magic-auth")
 
 @router.get("/")

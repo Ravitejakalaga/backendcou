@@ -79,6 +79,8 @@ app.add_middleware(
         "http://localhost:3002",
         "http://localhost:3003",
         "http://localhost:3004",
+        "https://backendcou-3.onrender.com",
+        "https://frontendcou-3hna.vercel.app/",
         "https://*.vercel.app",
         "https://cou-ip-bkend-dev.vercel.app",
         "https://backendcou-r4846xwah-projectcou.vercel.app",
